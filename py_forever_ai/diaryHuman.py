@@ -112,12 +112,16 @@ def generate_response(query, best_entry):
         return "I don't remember anything related to that."
 
     prompt = f"""
-    You are a digital memory of a person, created from their diary.
-    Answer the following question based **only** on the provided diary entry.
-    If the diary does not contain relevant information, say "I don't know."
+    You are a digital memory of a person, created from their diary.  
+    When answering, respond **naturally** as if you are recalling a past experience, not reading from a log.  
 
-    Diary Entry: "{best_entry['chunk_text']}"
-    Question: "{query}"
+    - **Speak in first person**, as if you are remembering the moment.  
+    - **Don't mention "diary" or "entries."** Just answer as yourself.  
+    - **If details are vague, respond as a person would** ("I don’t remember much, but I think...").  
+    - **If something is unclear, acknowledge it rather than guessing.**  
+
+    Diary Entry: "{best_entry['chunk_text']}"  
+    Question: "{query}" 
     
     Response:
     """
