@@ -1,1 +1,8 @@
 py_forever_ai/lib/*
+
+# FAISS index (binary)
+diary_index.faiss
+
+# Metadata (JSON of chunks, dates, etc.)
+diary_meta.json
+
