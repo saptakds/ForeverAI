@@ -113,7 +113,8 @@ def generate_response(query, best_entry):
 
     prompt = f"""
     You are a digital memory of a person, created from their diary.  
-    When answering, respond **naturally** as if you are recalling a past experience, not reading from a log.  
+    When answering, respond **naturally** as if you are recalling a past experience, not reading from a log.
+    Keep your answer under 200 tokens. 
 
     - **Speak in first person**, as if you are remembering the moment.  
     - **Don't mention "diary" or "entries."** Just answer as yourself.  
@@ -126,17 +127,12 @@ def generate_response(query, best_entry):
     Response:
     """
 
-    print("🛠️ Debug: Sending prompt to Llama...")  # ✅ Ensure it reaches here
-
     try:
-        output = llm(prompt, max_tokens=50)
-        print("🛠️ Debug: Llama Output Received")  # ✅ If this prints, Llama responded
+        output = llm(prompt, max_tokens=200)
 
     except Exception as e:
         print(f"❌ Error: Llama call failed -> {e}")
         return "Error communicating with Llama."
-
-    print("🛠️ Debug: Full Output ->", output)  # ✅ See the full response
 
     if "choices" in output and output["choices"]:
         return output["choices"][0]["text"].strip()
@@ -159,8 +155,6 @@ if __name__ == "__main__":
         for chunk in sub_chunks:
             final_chunks.append({"date": entry["date"], "chunk_text": chunk})
 
-    print(f"✅ Extracted & chunked {len(final_chunks)} entries.")
-
     # Generate embeddings & save to JSON
     embedded_data = generate_embeddings(final_chunks)
     with open("diary_embeddings.json", "w") as f:
@@ -173,14 +167,12 @@ if __name__ == "__main__":
 
     while True:
         query = input("\n🔍 Enter your search query: ")
-        print(f"🛠️ Debug: User entered -> {query}")  # ✅ Check if input is being read
 
         if query.lower() in ["exit", "quit"]:
             print("👋 Exiting...")
             break
 
         best_entry, best_score = find_best_match(query, embedded_data)
-        print(f"🛠️ Debug: Best Match Found -> {best_entry}")  # ✅ Check if match is found
 
         response = generate_response(query, best_entry)
         print(f"\n💬 AI Response: {response}")  # ✅ Ensure response is printed
