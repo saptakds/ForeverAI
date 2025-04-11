@@ -1,4 +1,5 @@
 py_forever_ai/lib/*
+py_forever_ai/bin/*
 
 # Datasource folder
 py_forever_ai/datasource/*
