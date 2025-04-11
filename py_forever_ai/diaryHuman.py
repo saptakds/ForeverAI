@@ -136,9 +136,9 @@ def generate_response(query, best_entry):
 
 # ---- 🏁 MAIN SCRIPT ----
 if __name__ == "__main__":
-    index_path = "diary_index.faiss"
-    meta_path = "diary_meta.json"
-    pdf_path = "/Users/saptakds/Documents/WIP Projects/Forever AI/Diary Content.pdf"
+    index_path = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/diary_index.faiss"
+    meta_path = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/diary_meta.json"
+    pdf_path = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/Diary Content.pdf"
 
     if not os.path.exists(index_path) or not os.path.exists(meta_path):
         print("🔧 First run: Extracting and indexing data...")

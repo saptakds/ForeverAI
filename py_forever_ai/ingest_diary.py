@@ -1,21 +1,24 @@
 import fitz
 import os
 import re
+import torch
 import json
 import hashlib
 import numpy as np
 import faiss
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
-os.listdir
+# ---- 🛠️ Fix Out of Memory Issues ----
+os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # ---- Paths ----
 PDF_PATH = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/Diary Content.pdf"
 FAISS_INDEX_PATH = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/diary_faiss.index"
 CHUNK_META_PATH = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/chunk_metadata.json"
-
-# ---- Load Embedder ----
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+# ---- 🔥 Load Embedding Model ----
 embedder = HuggingFaceEmbedding(model_name=EMBEDDING_MODEL, device="cpu")
 
 # ---- PDF & Text Preprocessing ----
