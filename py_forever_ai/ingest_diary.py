@@ -1,95 +1,122 @@
-import fitz
+#!/usr/bin/env python3
+"""
+Author: Saptak Das
+Date: April 2025
+
+Description:
+    Diary PDF Semantic Indexer — Converts personal diary PDFs into searchable, 
+    vectorized embeddings using FAISS and HuggingFace sentence transformers.
+
+    Features:
+    - PDF text extraction and cleaning
+    - Date-based entry segmentation
+    - Chunking of diary entries
+    - SHA-256 deduplication
+    - Vector embedding + FAISS index persistence
+"""
+
 import os
 import re
-import torch
 import json
 import hashlib
 import numpy as np
 import faiss
+import fitz  # PyMuPDF
+import torch
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
-# ---- 🛠️ Fix Out of Memory Issues ----
+# --------------------- ⚙️ ENVIRONMENT CONFIG ---------------------
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-# ---- Paths ----
+# --------------------- 📁 FILE PATHS ---------------------
 PDF_PATH = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/Diary Content.pdf"
 FAISS_INDEX_PATH = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/diary_faiss.index"
 CHUNK_META_PATH = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/chunk_metadata.json"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-# ---- 🔥 Load Embedding Model ----
+# --------------------- 🔥 EMBEDDING MODEL INIT ---------------------
 embedder = HuggingFaceEmbedding(model_name=EMBEDDING_MODEL, device="cpu")
 
-# ---- PDF & Text Preprocessing ----
-def extract_text_from_pdf(pdf_path):
+# --------------------- 📄 PDF TEXT EXTRACTION ---------------------
+def extract_text_from_pdf(pdf_path: str) -> str:
     doc = fitz.open(pdf_path)
-    return "\n".join([page.get_text("text") for page in doc])
+    return "\n".join(page.get_text("text") for page in doc)
 
-def clean_text(text):
-    return " ".join(text.replace("\n", " ").split())
+# --------------------- 🧹 TEXT CLEANING ---------------------
+def clean_text(raw_text: str) -> str:
+    return " ".join(raw_text.replace("\n", " ").split())
 
-def split_text_by_date(text):
-    date_pattern = r"(\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\b(?:Jan|Feb|Mar|Apr|...|Dec)[a-z]* \d{1,2}, \d{4})\b)"
+# --------------------- 📆 DATE-BASED SPLITTING ---------------------
+def split_text_by_date(text: str):
+    date_pattern = r"(\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2}, \d{4})\b)"
     entries = re.split(date_pattern, text)
     return [{"date": entries[i].strip(), "text": entries[i + 1].strip()} for i in range(1, len(entries), 2)]
 
-def split_into_chunks(text, max_chunk_size=500):
+# --------------------- 📦 TEXT CHUNKING ---------------------
+def split_into_chunks(text: str, max_chunk_size: int = 500):
     sentences = re.split(r'(?<=[.!?])\s+', text)
-    chunks, current = [], []
+    chunks, current_chunk = [], []
+
     for sentence in sentences:
-        if sum(len(s) for s in current) + len(sentence) <= max_chunk_size:
-            current.append(sentence)
+        if sum(len(s) for s in current_chunk) + len(sentence) <= max_chunk_size:
+            current_chunk.append(sentence)
         else:
-            chunks.append(" ".join(current))
-            current = [sentence]
-    if current: chunks.append(" ".join(current))
+            chunks.append(" ".join(current_chunk))
+            current_chunk = [sentence]
+
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+
     return chunks
 
-# ---- Hashing ----
-def hash_chunk(text):
+# --------------------- 🔒 CONTENT HASHING ---------------------
+def hash_chunk(text: str) -> str:
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
-# ---- Load or Init Metadata ----
-def load_metadata():
+# --------------------- 📂 METADATA MANAGEMENT ---------------------
+def load_metadata() -> dict:
     if os.path.exists(CHUNK_META_PATH):
         with open(CHUNK_META_PATH, "r") as f:
             return json.load(f)
     return {}
 
-def save_metadata(meta):
+def save_metadata(metadata: dict) -> None:
     with open(CHUNK_META_PATH, "w") as f:
-        json.dump(meta, f, indent=2)
+        json.dump(metadata, f, indent=2)
 
-# ---- Load or Init FAISS ----
-def load_faiss(dim=384):
-    if os.path.exists(FAISS_INDEX_PATH):
-        return faiss.read_index(FAISS_INDEX_PATH)
-    return faiss.IndexFlatL2(dim)
+# --------------------- 🧠 FAISS INDEX MANAGEMENT ---------------------
+def load_faiss(dim: int = 384):
+    return faiss.read_index(FAISS_INDEX_PATH) if os.path.exists(FAISS_INDEX_PATH) else faiss.IndexFlatL2(dim)
 
-def save_faiss(index):
+def save_faiss(index) -> None:
     faiss.write_index(index, FAISS_INDEX_PATH)
 
-# ---- Main ----
-if __name__ == "__main__":
-    text = clean_text(extract_text_from_pdf(PDF_PATH))
-    entries = split_text_by_date(text)
+# --------------------- 🚀 MAIN INDEXING LOGIC ---------------------
+def index_diary():
+    raw_text = extract_text_from_pdf(PDF_PATH)
+    cleaned_text = clean_text(raw_text)
+    entries = split_text_by_date(cleaned_text)
 
     existing_meta = load_metadata()
     faiss_index = load_faiss()
 
-    new_vectors, new_ids = [], []
+    new_vectors = []
+    new_ids = []
     updated_meta = existing_meta.copy()
-    next_id = max(map(int, existing_meta.keys())) + 1 if existing_meta else 0
+    next_id = max(map(int, existing_meta.keys()), default=-1) + 1
 
     for entry in entries:
         chunks = split_into_chunks(entry["text"])
         for chunk in chunks:
             chunk_hash = hash_chunk(chunk)
-            if chunk_hash in (m["hash"] for m in existing_meta.values()):
+
+            # Deduplication check
+            if chunk_hash in (meta["hash"] for meta in existing_meta.values()):
                 continue
-            emb = embedder.get_text_embedding(f"{entry['date']}: {chunk}")
-            new_vectors.append(np.array(emb, dtype=np.float32))
+
+            embedding = embedder.get_text_embedding(f"{entry['date']}: {chunk}")
+            new_vectors.append(np.array(embedding, dtype=np.float32))
             updated_meta[str(next_id)] = {"date": entry["date"], "text": chunk, "hash": chunk_hash}
             new_ids.append(next_id)
             next_id += 1
@@ -101,3 +128,7 @@ if __name__ == "__main__":
         print(f"✅ Added {len(new_vectors)} new chunks.")
     else:
         print("ℹ️ No new content to index.")
+
+# --------------------- 🏁 SCRIPT ENTRYPOINT ---------------------
+if __name__ == "__main__":
+    index_diary()
