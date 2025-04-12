@@ -22,7 +22,7 @@ import tiktoken
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 # --------------------- 💡 CONFIGURATION ---------------------
-USE_LOCAL_LLM = False  # Set to False for Azure GPT-4o
+USE_LOCAL_LLM = True  # Set to False for Azure GPT-4o
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 FAISS_INDEX_PATH = "/Users/saptakds/Documents/WIP Projects/Forever AI/py_forever_ai/datasource/diary_faiss.index"
@@ -55,7 +55,7 @@ if USE_LOCAL_LLM:
 else:
     from openai import AzureOpenAI
     AZURE_OPENAI_KEY = "xxxxxx"
-    AZURE_OPENAI_ENDPOINT = "https://azureopenai-forever-ai.openai.azure.com/"
+    AZURE_OPENAI_ENDPOINT = "xxxxxxxxxxxxx"
     AZURE_DEPLOYMENT_NAME = "gpt-4o"
 
     client = AzureOpenAI(
@@ -128,7 +128,7 @@ def generate_response(query: str, best_entry: dict) -> str:
 def main():
     print(f"🧠 Memory Mode: {'Local Llama' if USE_LOCAL_LLM else 'Azure GPT-4o'}\n")
     while True:
-        query = input("\n🔍 Ask your friend: ").strip()
+        query = input("\n🔍 Ask the memory: ").strip()
         if query.lower() in ["exit", "quit"]:
             print("👋 Exiting...")
             break
